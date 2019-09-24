@@ -1,10 +1,15 @@
 #include "stm32f0xx.h"
 #include "stm32f0_discovery.h"
 #include <string.h>
+#include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h> // for strtoul()
 
 
 int display_initialized = 0;
+int temp = 0;
+int ir = 0;
+int ldr = 0;
 
 static void nano_wait(int t) {
     asm("       mov r0,%0\n"
@@ -175,23 +180,24 @@ void repeat_write(void) {
     }
 }
 
-void printnums(void){
-    for(;;){
-        char a;
-        //for(a = '1'; a<= '9'; a++)
-        //{
-        writechar('H');
-        writechar(' ');
-        writechar('E');
-        writechar(' ');
-        writechar('L');
-        writechar(' ');
-        writechar('L');
-        writechar(' ');
-        writechar('O');
-        writechar(' ');
-        //}
-        writechar('\n');
+void sendstring(char s[]) {
+	int i = 0;
+	char c;
+	for (i = 0; s[i] != '\0'; i++){
+		c = s[i];
+		writechar(c);
+	}
+    writechar('\n');
+}
+
+void sprintnums(void){
+    char buffer[50];
+    for(;;) {
+    	temp=(temp+1)%100;
+    	ir=(ir+2)%550;
+    	ldr=(ldr+3)%200;
+    	sprintf(buffer, "%d,%d,%d", temp, ir, ldr);
+    	sendstring(buffer);
     }
 }
 
@@ -360,7 +366,7 @@ int main(void)
 {
     init_usart2();
     //repeat_write();
-    printnums();
+    sprintnums();
     //echo();
     //testbench();
     return 0;
