@@ -14,7 +14,7 @@ double x;
 static void nano_wait(int t);
 int read_adc_channel(unsigned int channel);
 void tim15_init(void);
-void init_usart2(void);
+void init_usart1(void);
 void writechar(char c);
 void send_to_usart(void);
 void print(const char *s);
@@ -50,71 +50,71 @@ void tim15_init(void) {
 void TIM15_IRQHandler(void) {
 	TIM15->SR = ~TIM_SR_UIF;
 	x = read_adc_channel(0) * 3 / 4096.0;
-	temp = (x - 0.5) * 127 / 3; //PA0
+	temp = (x - 0.5) * 75 / 3; //PA0
 	ldr = read_adc_channel(1) - 3100; //PA1
-	ir = read_adc_channel(13); //PC3
+	ir = read_adc_channel(2); //PA2
 }
 
-void init_usart2(void) {
+void init_usart1(void) {
     //enable port A
     RCC->AHBENR = RCC_AHBENR_GPIOAEN;
-    //PA2 USART2_TX
-    //PA3 USART2_RX
+    //PA9 USART1_TX
+    //PA10 USART1_RX
     // Pins 2 and 3 (make it alternate functions)
-    GPIOA->MODER &= ~(3<<4);
-    GPIOA->MODER |= 2<<4;
+    GPIOA->MODER &= ~(3<<18);
+    GPIOA->MODER |= 2<<18;
 
-    GPIOA->MODER &= ~(3<<6);
-    GPIOA->MODER |= 2<<6;
+    GPIOA->MODER &= ~(3<<20);
+    GPIOA->MODER |= 2<<20;
 
     //Alternate Function low register
-    GPIOA->AFR[0] &= ~0xffff;
-    GPIOA -> AFR[0] |= 0x1100;
+    GPIOA->AFR[1] &= ~0xffff;
+    GPIOA -> AFR[1] |= 0x110;
 
-    //Set the output speed register to high speed for TX (PA2)
-    GPIOA -> OSPEEDR &= ~(3<<4);
-    GPIOA -> OSPEEDR |= 3<<4;
+    //Set the output speed register to high speed for TX (PA9)
+    GPIOA -> OSPEEDR &= ~(3<<18);
+    GPIOA -> OSPEEDR |= 3<<18;
 
-    // Configure USART2
-    RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
+    // Configure USART1
+    RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
 
     // Disable USART
-    USART2->CR1 &= ~USART_CR1_UE;
+    USART1->CR1 &= ~USART_CR1_UE;
 
-    // Configure USART2 for 115200 baud operation with 8 bits
-    USART2->BRR = 0x1A1;
+    // Configure USART1 for 115200 baud operation with 8 bits
+    USART1->BRR = 0x1A1;
 
     //16 bit oversampling
-    USART2->CR1 &= ~USART_CR1_OVER8;
+    USART1->CR1 &= ~USART_CR1_OVER8;
 
     //Disable Parity control
-    USART2->CR1 &= ~USART_CR1_PCE;
+    USART1->CR1 &= ~USART_CR1_PCE;
 
     //One bit stop
-    USART2->CR2 &= ~USART_CR2_STOP;
+    USART1->CR2 &= ~USART_CR2_STOP;
 
     //Set it to be 1 start bit, 8 data bit
-    //USART2->CR1 |= 0x10000000;
+    //USART1->CR1 |= 0x10000000;
 
     // Enable transmitter
-    USART2->CR1 |= USART_CR1_TE;
+    USART1->CR1 |= USART_CR1_TE;
     // Enable receiver
-    USART2->CR1 |= USART_CR1_RE;
+    USART1->CR1 |= USART_CR1_RE;
     // Enable USART
-    USART2->CR1 |= USART_CR1_UE;
+    USART1->CR1 |= USART_CR1_UE;
 }
 
 void writechar(char c) {
     //Waits for "transitter empty" flag to be true
-    while((USART2->ISR & USART_ISR_TXE) != USART_ISR_TXE);
+    while((USART1->ISR & USART_ISR_TXE) != USART_ISR_TXE);
 
     if(c == '\n')
     {
-        USART2->TDR = '\r';
+        USART1->TDR = '\r';
     }
 
-    while((USART2->ISR & USART_ISR_TXE) != USART_ISR_TXE);
-    USART2->TDR = c;
+    while((USART1->ISR & USART_ISR_TXE) != USART_ISR_TXE);
+    USART1->TDR = c;
 
 }
 
@@ -145,11 +145,9 @@ void println(const char *s) {
 
 void setup_gpio() {
 	RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
-	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
     GPIOA->MODER |= 3<<0;
     GPIOA->MODER |= 3<<2;
-    GPIOC->MODER |= 3<<6;
-
+    GPIOA->MODER |= 3<<4;
 }
 
 void setup_adc() {
@@ -163,7 +161,7 @@ int main(void)
 {
 	setup_gpio();
 	setup_adc();
-    init_usart2();
+    init_usart1();
     tim15_init();
     send_to_usart();
     return 0;
