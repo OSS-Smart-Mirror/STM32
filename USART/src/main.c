@@ -6,9 +6,10 @@
 #include <stdlib.h>
 
 int display_initialized = 0;
-int temp = 0;
-int ir = 0;
-int ldr = 0;
+float temp = 0;
+char LDR = 'M';
+float ir = 0;
+float ldr = 0;
 double x;
 
 static void nano_wait(int t);
@@ -121,9 +122,23 @@ void writechar(char c) {
 void send_to_usart(void) {
     char buffer[50];
     for(;;) {
-    	sprintf(buffer, "%d,%d,%d", temp, ldr, ir);
+    	nano_wait(50000000);
+    	ldr = (5.0 * read_adc_channel(0)) / 4096.0; //PA0
+    	if (ldr < 1.5) {
+    		LDR = 'L';
+    	} else if (ldr > 4) {
+    		LDR = 'H';
+    	} else {
+    		LDR = 'M';
+    	}
+    	nano_wait(50000000);
+    	ir = (5.0 * read_adc_channel(1)) / 4096.0; //PA1
+    	if (ir > 4.7) {
+    		nano_wait(50000000);
+    		temp = 23.0 * ((5.0 * read_adc_channel(2) / 4096.0) - 0.9); //PA2
+    	}
+    	sprintf(buffer, "%.1f,%c,%.1f", temp, LDR, ir);
     	println(buffer);
-    	nano_wait(100000000);
     }
 }
 
@@ -162,7 +177,6 @@ int main(void)
 	setup_gpio();
 	setup_adc();
     init_usart1();
-    tim15_init();
     send_to_usart();
     return 0;
 }
